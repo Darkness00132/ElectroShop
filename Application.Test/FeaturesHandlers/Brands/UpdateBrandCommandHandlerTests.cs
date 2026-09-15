@@ -29,10 +29,12 @@ public class UpdateBrandCommandHandlerTests
     {
         // Arrange
         var brand = new Brand("Samsung", "سامسونج");
-        var command = new UpdateBrandCommand(brand.Id, "LG", "إل جي");
+        var command = CreateUpdateBrandCommand(brand.Id);
 
         _brandRepositoryMock
-            .Setup(x => x.GetByIdAsync(brand.Id, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByIdAsync(
+                brand.Id,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(brand);
 
         _brandRepositoryMock
@@ -57,14 +59,18 @@ public class UpdateBrandCommandHandlerTests
     public async Task A_Brand_Cannot_Be_Updated_When_It_Does_Not_Exist()
     {
         // Arrange
-        var command = new UpdateBrandCommand(Guid.NewGuid(), "LG", null);
+        var command = CreateUpdateBrandCommand(Guid.NewGuid());
 
         _brandRepositoryMock
-            .Setup(x => x.GetByIdAsync(command.Id, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByIdAsync(
+                command.Id,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((Brand?)null);
 
         // Act
-        var act = () => _sut.Handle(command, CancellationToken.None);
+        var act = () => _sut.Handle(
+            command,
+            CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<NotFoundException>();
@@ -75,10 +81,12 @@ public class UpdateBrandCommandHandlerTests
     {
         // Arrange
         var brand = new Brand("Samsung", "سامسونج");
-        var command = new UpdateBrandCommand(brand.Id, "LG", null);
+        var command = CreateUpdateBrandCommand(brand.Id);
 
         _brandRepositoryMock
-            .Setup(x => x.GetByIdAsync(brand.Id, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByIdAsync(
+                brand.Id,
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync(brand);
 
         _brandRepositoryMock
@@ -88,7 +96,9 @@ public class UpdateBrandCommandHandlerTests
             .ReturnsAsync(new Brand("LG", "existing"));
 
         // Act
-        var act = () => _sut.Handle(command, CancellationToken.None);
+        var act = () => _sut.Handle(
+            command,
+            CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<ConflictException>();
@@ -98,5 +108,10 @@ public class UpdateBrandCommandHandlerTests
         _unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    private UpdateBrandCommand CreateUpdateBrandCommand(Guid id)
+    {
+        return new UpdateBrandCommand(id, "LG", "إل جي");
     }
 }
