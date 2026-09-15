@@ -41,8 +41,8 @@ internal class UpdateBrandCommandHandler : IRequestHandler<UpdateBrandCommand>
         if (duplicatedBrand is not null)
             throw new ConflictException("A brand with the same English or Arabic name already exists.");
 
-        brand.UpdateEnglishName(request.NameEn ?? brand.NameEn);
-        brand.UpdateArabicName(request.NameAr ?? brand.NameAr);
+        brand.UpdateEnglishName(request.NameEn);
+        brand.UpdateArabicName(request.NameAr);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
