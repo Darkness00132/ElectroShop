@@ -2,176 +2,203 @@
 
 Thank you for helping improve ElectroShop. This repository is a .NET 10 e-commerce backend organized around Clean Architecture, domain-driven design, CQRS with MediatR, and Vertical Slice Architecture.
 
-This guide describes the contribution workflow and the project-specific standards expected for changes to the catalog, identity, cart, order, payment, inventory, procurement, review, and newsletter capabilities.
+This guide describes the workflow and the project-specific standards expected for changes to any business capability.
 
 ## Before You Start
 
-1. Read the [README](../README.md) to understand the architecture, domain boundaries, local setup, and Azure roadmap.
-2. Check existing [issues](../../issues) and pull requests before starting work.
-3. For significant changes, open or discuss an issue first so the proposed domain and API behavior is understood before implementation.
-4. Confirm that your contribution complies with the [PolyForm Noncommercial License 1.0.0](../LICENSE.md).
+1. Read the [README](../README.md) for the architecture, setup, and current capabilities.
+2. Read the [PRD](../PRD.md) for the product scope and the behavioral decisions behind each feature.
+3. Check existing [issues](../../issues) and pull requests before starting work.
+4. For significant changes, open or discuss an issue first so the domain and API behavior is understood before implementation.
+5. Confirm that your contribution complies with the [PolyForm Noncommercial License 1.0.0](../LICENSE.md).
 
 ## Local Development
 
 ### Requirements
 
 - .NET 10 SDK
-- SQL Server or a compatible local SQL Server instance
-- Redis for the configured cache integration
+- SQL Server (connection string `DefaultConnection`)
+- Redis (connection string `Redis`)
 - Git
 
-### Build, Test, and Run
+### Commands
 
-From the repository root:
+| Task | Command |
+|---|---|
+| Restore | `dotnet restore` |
+| Build (CI gate) | `dotnet build --configuration Release -warnaserror` |
+| Run all tests | `dotnet test` |
+| Run the API | `dotnet run --project Ecommerce.Api` |
+| Apply migrations | `dotnet ef database update --project Infrastructure --startup-project Ecommerce.Api` |
+| Add a migration | `dotnet ef migrations add <Name> --project Infrastructure --startup-project Ecommerce.Api` |
 
-```powershell
-dotnet restore
-dotnet build
-dotnet test
-dotnet run --project Ecommerce.Api
-```
+> [!IMPORTANT]
+> CI builds with **warnings treated as errors**. `dotnet test` alone does **not** compile the API project — always run the full `dotnet build` above before committing, or a broken `Ecommerce.Api` can slip into a commit unnoticed.
 
-Before running the API against a new or changed database schema, apply the EF Core migrations:
-
-```powershell
-dotnet ef database update --project Infrastructure --startup-project Ecommerce.Api
-```
-
-The API documentation is available at:
-
-```text
-https://localhost:<port>/scalar
-```
-
-Use Scalar's **Authorize** control with a JWT access token to test protected endpoints.
+The API documentation is served by Scalar at the root URL (`https://localhost:<port>/`). Use its **Authorize** control with a JWT access token for protected endpoints.
 
 ## Architecture Rules
 
 ### Clean Architecture Boundaries
 
 - `Domain` contains entities, value objects, enums, and business invariants.
-- `Application` contains use cases, CQRS commands and queries, validators, DTOs, pipeline behaviors, and abstractions.
-- `Infrastructure` contains EF Core persistence, repositories, Identity implementation, external services, background jobs, and storage implementations.
-- `Ecommerce.Api` contains controllers, HTTP contracts, middleware, authentication setup, and presentation concerns.
-- Dependencies must point inward. Do not reference `Ecommerce.Api` or `Infrastructure` from `Application` or `Domain`.
-- The Domain project has a deliberate Identity dependency for `AppUser : IdentityUser<Guid>` and `AppRole : IdentityRole<Guid>`. Do not add other external or infrastructure dependencies to Domain.
+- `Application` contains use cases (commands/queries + handlers + validators), pipeline behaviors, DTOs, and abstractions.
+- `Infrastructure` contains EF Core persistence, repositories, Identity, storage, email, and background jobs.
+- `Ecommerce.Api` contains controllers, HTTP contracts, middleware, and authorization setup.
+- Dependencies point inward. Never reference `Ecommerce.Api` or `Infrastructure` from `Application` or `Domain`.
+- The Domain project's only allowed framework dependency is the Identity package for `AppUser`/`AppRole`.
 
 ### Vertical Slice Organization
 
-Place new use cases inside the relevant feature folder:
+Place each use case in its feature folder, keeping everything it needs together:
 
 ```text
 Application/Features/<Feature>/
 ├── Commands/<UseCase>/
-│   ├── <UseCase>Command.cs
-│   ├── <UseCase>Handler.cs
-│   └── <UseCase>Validator.cs
-├── Queries/<UseCase>/
-│   ├── <UseCase>Query.cs
-│   ├── <UseCase>Handler.cs
-│   └── <UseCase>Validator.cs
-├── Dtos/
-└── <Feature>Mapping.cs
+│   ├── <UseCase>Command.cs        # the request record
+│   ├── <UseCase>Handler.cs        # one handler per use case
+│   └── <UseCase>Validator.cs      # FluentValidation rules (when input is non-trivial)
+├── Queries/<UseCase>/…
+├── Dtos/                          # feature-facing DTOs
+└── <Feature>Mapping.cs            # AutoMapper profile (when projections are used)
 ```
 
-Follow these rules:
+Rules:
 
 - One command or query represents one focused use case.
-- Keep the handler, validator, request, and use-case-specific models together.
-- Put shared abstractions in `Application/Abstractions` only when they are genuinely shared.
-- Keep controllers thin; they should translate HTTP concerns and delegate to MediatR.
-- Keep business invariants in Domain entities rather than in controllers or infrastructure services.
-- Use queries for reads and projections; use commands for state changes and business operations.
-- Do not expose infrastructure types through API contracts or Application interfaces.
+- Handlers depend only on abstractions (`IRepository<T>`, `IUnitOfWork`, `ICurrentUserService`, …), never on concrete infrastructure.
+- Keep controllers thin: map the request to a command, send it through `ISender`, translate the outcome to HTTP. Business invariants live in Domain entities, not in controllers.
+- Domain state changes happen through explicit entity methods (for example `order.Cancel()`, `inventory.IncreaseStock(...)`), never by setting properties from outside.
+- Introduce a shared abstraction only when at least two slices genuinely need it (see `Application/Common/Checkout` for the pattern).
 
-## Domain and API Expectations
+### Caching Conventions
 
-- Preserve entity invariants and guarded state transitions.
-- Keep order lines immutable and preserve purchase-time product and price snapshots.
-- Treat inventory reservation and stock deduction as concurrency-sensitive operations.
-- Make payment callbacks, retries, and externally triggered operations idempotent.
-- Apply authorization policies appropriate to the role and business capability.
-- Keep web refresh tokens in secure `HttpOnly` cookies and do not expose secrets in responses or logs.
-- Update OpenAPI and Scalar-visible API behavior when adding or changing endpoints.
-- Consider backward compatibility before changing existing routes, request contracts, response contracts, or order states.
+- Read-side queries that should be cached implement `ICacheableQuery<T>` and declare a cache key, tags, and lifetime.
+- Commands that change cached data implement `ICacheInvalidatingCommand` and declare the keys and tags to evict. Cache names live in `Application/Constants/CacheNames.cs`.
+- When a command changes data that other aggregates embed in their cached responses (for example a discount shown inside cached product listings), invalidate by tag so every affected entry refreshes.
+
+### API Conventions
+
+- Admin management controllers are named `*ManagementController`, live under `Controllers/Admin/`, carry `[Authorize(Roles = AppRoles.<Area>Administrators)]`, and use the route `api/admin/<resource>`.
+- Public storefront endpoints live under `api/<resource>`.
+- Every endpoint documents its summary, remarks, parameters, and all response codes in XML comments — these drive the Scalar/OpenAPI page.
+- **Do not use the `{id:guid}` route constraint.** A malformed identifier should fail model binding and return **400**, not a 404 "endpoint not found".
+
+  ```csharp
+  // Preferred
+  [HttpPut("{id}")]
+  public async Task<IActionResult> Update(Guid id, …)
+
+  // Avoid — a non-GUID id would return 404 instead of 400
+  [HttpPut("{id:guid}")]
+  ```
+
+- Return values follow the exception model; do not return ad-hoc error shapes:
+
+| Exception thrown | HTTP result |
+|---|---|
+| `ValidationException` | 400 with field errors |
+| `DomainException` | 400 (invariant violated) |
+| `NotFoundException` | 404 |
+| `UnauthorizedException` | 401 |
+| `ForbiddenException` | 403 |
+| `ConflictException` | 409 (uniqueness, stock, state conflicts) |
+
+- `DbUpdateConcurrencyException` (optimistic concurrency) is handled globally and surfaces as 409. Guard multi-write flows that must not oversell with concurrency tokens rather than locks.
 
 ## Testing Requirements
 
-Put tests in the project that matches the code under test:
+This project follows **behavior-driven unit testing**: tests describe and verify *what the system does*, not *how it is implemented*. That keeps them resistant to refactoring and maintenance.
 
-- `Domain.Test` for domain entities, invariants, value objects, and state transitions.
-- `Application.Test` for handlers, validators, pipeline behaviors, and application use cases.
-- `Infrastructure.Test` for persistence and infrastructure integrations.
+- Name tests as business rules, using behavior language:
 
-Every behavior change should include or update tests where practical. At minimum, test:
+  ```csharp
+  public async Task An_Order_Cannot_Be_Placed_When_There_Is_Not_Enough_Stock()
+  public async Task The_Previous_Image_Is_Deleted_When_It_Is_Replaced_By_A_New_One()
+  ```
 
-- Valid and invalid input paths.
-- Authorization and ownership rules.
-- Boundary values and empty collections.
-- Inventory concurrency, reservation release, and cancellation behavior.
-- Payment success, failure, retry, and duplicate-callback behavior.
-- Order state transition rules.
+- Drive only the public entry point of the use case (`handler.Handle(command, …)`). Never assert on private state, call order, or internal helpers.
+- Assert observable outcomes through the ports the handler depends on: captured entities passed to `AddAsync`, verified repository/storage interactions, returned DTOs, and thrown application exceptions.
+- Keep the Arrange–Act–Assert structure with `// Arrange`, `// Act`, `// Assert` comments and shared private factory/setup helpers per test class.
 
-Run the complete test suite before opening a pull request:
+Every behavior change should include or update tests. At minimum cover:
 
-```powershell
+- [ ] The valid path and the observable result (saved state, returned value).
+- [ ] Each failure path and its exception (not found → `NotFoundException`, conflicts → `ConflictException`, …).
+- [ ] Compensation logic: uploaded files are cleaned up when saving fails; replaced images are removed after a successful save.
+- [ ] Domain state machines: invalid transitions throw.
+- [ ] Boundary values (quantities, stock limits, date ranges, rating bounds).
+
+Where tests live:
+
+- `Domain.Test` — entities, invariants, value objects, state transitions.
+- `Application.Test` — handlers, validators, and use-case flows (one file per handler, or one per cohesive handler family).
+- `Infrastructure.Test` — repositories, token generation, email rendering, image manipulation.
+
+Run the complete suite before opening a pull request:
+
+```bash
+dotnet build --configuration Release -warnaserror
 dotnet test
 ```
 
-The CI workflow also runs restore, vulnerable-package checks, a Release build with warnings treated as errors, and tests on .NET 10.
-
 ## Database and Migration Changes
 
-When changing entities, relationships, configurations, or persistence behavior:
+When changing entities, relationships, or persistence behavior:
 
-1. Explain the schema impact in the pull request.
-2. Add or update the appropriate EF Core migration when required.
-3. Verify the migration against a local database.
-4. Check that existing data remains safe and that rollback or recovery considerations are documented.
-5. Do not commit connection strings, credentials, tokens, or production configuration.
+1. Add the migration with the command from [Local Development](#local-development).
+2. **Review the generated migration.** If it contains operations unrelated to your change, the model has drifted from the last migration — do not bundle unrelated schema changes into your feature. Remove them from the migration and raise the drift separately.
+3. Keep each migration tied to its feature commit.
+4. Verify locally with `dotnet ef database update`.
+5. Never commit connection strings, credentials, tokens, or production configuration.
 
 ## Commit and Branch Guidance
 
-Use a short, descriptive branch name, for example:
+- **One commit per feature.** A commit must not mix two features. Small fixes that belong to the same feature belong to that feature's commit.
+- Title the commit after the outcome, then summarize what changed in a few bullets:
 
-- `feature/product-search`
-- `fix/order-stock-reservation`
-- `refactor/account-token-service`
-- `docs/contributing-guide`
+  ```text
+  finish orders feature
 
-Use focused commits that describe the project behavior being changed. Keep unrelated formatting or refactoring out of feature commits.
+  - customers place an order from their cart (cash on delivery): prices, discounts, and stock are checked live
+  - order lines snapshot product names, SKUs, and prices at purchase time
+  - behaviour tests cover placement, promo application, and stock restore
+  ```
+
+- Branch names mirror the work: `feature/product-search`, `fix/order-stock-restore`, `refactor/account-token-service`, `docs/contributing-guide`.
+- Keep unrelated formatting or refactoring out of feature commits.
 
 ## Pull Requests
 
 Use the repository pull request template and include:
 
-- A concise summary of the problem and solution.
-- Related issue links, such as `Closes #123`.
+- A concise summary of the problem and the solution.
+- Related issue links (for example `Closes #123`).
 - The affected layer, feature slice, and domain capability.
-- API contract, authorization, database, migration, or configuration impact.
-- Tests added or updated and the exact validation performed.
-- Any known limitations or follow-up work.
+- API contract, authorization, database, or configuration impact.
+- Tests added or updated, and the exact validation performed (`build` + `test` output).
 
-Before requesting review, confirm:
+Before requesting review, confirm the checklist:
 
-- [ ] `dotnet build` succeeds without warnings.
+- [ ] `dotnet build --configuration Release -warnaserror` succeeds.
 - [ ] `dotnet test` passes.
-- [ ] New use cases follow the existing vertical slice structure.
+- [ ] New use cases follow the vertical slice structure.
 - [ ] Clean Architecture dependency direction is preserved.
-- [ ] Domain invariants and authorization rules are covered.
-- [ ] Database migrations are included or explicitly marked as unnecessary.
+- [ ] Domain invariants and authorization rules are covered by behavior tests.
+- [ ] New/changed endpoints document response codes and follow the naming and status-code conventions.
+- [ ] Migrations are included and reviewed, or explicitly unnecessary.
 - [ ] No secrets or local configuration values are committed.
-- [ ] README or PRD documentation is updated when behavior or architecture changes.
+- [ ] README/PRD updated when behavior or architecture changes.
 
 ## Reporting Bugs and Requesting Features
 
 Use the repository issue templates:
 
-- **Bug reports:** Include the endpoint, HTTP method, request context, response code, runtime, database/tools, and reproducible steps.
-- **Feature requests:** Describe the business problem, proposed solution, affected component or layer, API/use-case design, alternatives, and whether the change affects contracts, migrations, or tests.
+- **Bug reports:** include the endpoint, HTTP method, request context, response code, runtime, database/tools, and reproducible steps.
+- **Feature requests:** describe the business problem, the proposed solution, the affected component, and whether it affects contracts, migrations, or tests.
 
-Security vulnerabilities should not be disclosed in a public issue. Contact the project maintainer privately using the contact information provided in the README.
+Security vulnerabilities should not be disclosed in a public issue. Contact the project maintainer privately using the contact information in the README.
 
-## License and Contributions
+## License
 
-By contributing, you acknowledge that this project is licensed under the [PolyForm Noncommercial License 1.0.0](../LICENSE.md). Contributions must remain consistent with the license terms and the project's stated noncommercial scope.
+By contributing, you acknowledge that the project is licensed under the [PolyForm Noncommercial License 1.0.0](../LICENSE.md) and that contributions must remain consistent with its noncommercial scope.

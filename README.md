@@ -3,283 +3,298 @@
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat&logo=dotnet)](https://dotnet.microsoft.com/)
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20%2F%20DDD--Inspired-blue)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![CQRS & MediatR](https://img.shields.io/badge/Pattern-CQRS%20with%20MediatR-brightgreen)](https://github.com/jbogard/MediatR)
-[![Status](https://img.shields.io/badge/Status-In%20Active%20Development-orange)](#project-status--azure-roadmap)
+[![Tests](https://img.shields.io/badge/Tests-~400%20passing-success)](#testing)
+[![Status](https://img.shields.io/badge/Status-Feature%20Complete%20%2F%20Pre--Release-orange)](#roadmap)
 [![License: PolyForm NonCommercial 1.0.0](https://img.shields.io/badge/License-PolyForm%20NC%201.0.0-red.svg)](./LICENSE.md)
 
-ElectroShop is a modular e-commerce backend engine built with C# and .NET 10. It is designed as a production-oriented platform and an architectural blueprint demonstrating separation of concerns, domain modeling, transactional resilience, and infrastructure decoupling.
+ElectroShop is a modular e-commerce backend built with C# and .NET 10. It implements the full retail flow — catalog, cart, checkout, orders, cash-on-delivery payments, inventory, procurement, reviews, and newsletter — using **Clean Architecture**, **Domain-Driven Design**, **CQRS with MediatR**, and **Vertical Slice Architecture**.
+
+> [!NOTE]
+> This repository is public for portfolio evaluation, code review, and educational purposes only. See [License](#license).
 
 ---
 
-## Architectural Blueprint
+## Table of Contents
 
-The platform follows **Clean Architecture** and **Domain-Driven Design (DDD)** principles. Business rules remain isolated from databases, transport protocols, and infrastructure integrations. The Domain project has one deliberate framework dependency for the shared ASP.NET Core Identity base types used by `AppUser` and `AppRole`.
+- [Feature Overview](#feature-overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Domain Model](#domain-model)
+- [Getting Started](#getting-started)
+- [Authentication & Authorization](#authentication--authorization)
+- [API Surface](#api-surface)
+- [Testing](#testing)
+- [Roadmap](#roadmap)
+- [License](#license)
 
-```text
-              ┌───────────────────────────────────────────┐
-              │                 API Layer                 │
-              │   Controllers, middleware, and OpenAPI    │
-              └─────────────────────┬─────────────────────┘
-                                    │
-                                    ▼
-              ┌───────────────────────────────────────────┐
-              │             Application Layer             │
-              │   CQRS commands, queries, DTOs, pipeline  │
-              └─────────────────────┬─────────────────────┘
-                                    │
-                                    ▼
-              ┌───────────────────────────────────────────┐
-              │               Domain Layer                │
-              │     Entities, enums, value objects, rules │
-              └─────────────────────▲─────────────────────┘
-                                    │
-              ┌─────────────────────┴─────────────────────┐
-              │            Infrastructure Layer           │
-              │    EF Core, persistence, and integrations │
-              └───────────────────────────────────────────┘
+## Feature Overview
+
+| Area | Capabilities |
+|---|---|
+| **Identity** | Registration with email confirmation, JWT login, refresh-token rotation and revocation, password reset, lockout after repeated failures, web sessions with HttpOnly refresh-token cookies + antiforgery, role-based authorization |
+| **Catalog** | Bilingual (EN/AR) categories, brands, and products with SKUs, dynamic attributes (RAM, color, …), image galleries with automatic resize to WebP, and configurable discounts |
+| **Cart & Checkout** | One persistent cart per customer, stock-validated quantities, live checkout summary, promo-code evaluation |
+| **Orders** | Checkout with purchase-time name/SKU/price snapshots, promo codes, shipping fee, atomic stock decrement with overselling protection, customer cancellation that restores stock, full staff-driven state machine |
+| **Payments** | Cash on delivery: payment recorded per order, idempotent mark-as-paid on cash collection, refunds for delivered orders |
+| **Inventory** | Stock in/out/adjust with an auditable transaction log (before/after quantities), reorder levels and low-stock flags |
+| **Procurement** | Suppliers, purchase orders (draft → approval → partial/full receipt → completion), goods receipts that feed stock into inventory through auditable transactions |
+| **Reviews** | Purchase-gated reviews (one per customer per product), owner editing, support-agent moderation, public listing |
+| **Newsletter** | Public subscribe/unsubscribe with duplicate prevention, subscriber listing for administrators |
+
+## Architecture
+
+The solution follows **Clean Architecture**: dependencies point inward, and the Domain layer has exactly one deliberate framework dependency (`Microsoft.AspNetCore.Identity.EntityFrameworkCore` for the identity base classes).
+
+```mermaid
+flowchart TD
+    API["Ecommerce.Api<br/>Controllers · Contracts · Middleware · OpenAPI"]
+    APP["Application<br/>CQRS Commands & Queries · Validators · Pipeline Behaviors · Abstractions"]
+    DOM["Domain<br/>Entities · Value Objects · Business Invariants"]
+    INF["Infrastructure<br/>EF Core · Repositories · Identity · Storage · Email · Jobs"]
+
+    API --> APP
+    APP --> DOM
+    INF --> APP
+    INF --> DOM
 ```
 
-### Architectural Layers & Design Rules
-
-#### 1. Core Domain (`Domain`)
-
-- **Role:** Contains business models, invariants, value objects, and domain enums.
-- **Controlled dependency:** The Domain project references `Microsoft.AspNetCore.Identity.EntityFrameworkCore` only to derive `AppUser` from `IdentityUser<Guid>` and `AppRole` from `IdentityRole<Guid>`. It has no references to application, infrastructure, database-provider, or presentation projects.
-- **Rich invariants:** Business rules are encapsulated within domain entities.
-- **Encapsulation:** State mutations occur through explicit domain methods.
-
-#### 2. Core Application (`Application`)
-
-- **Role:** Orchestrates execution flows using CQRS and MediatR.
-- **CQRS separation:** Read-side queries are isolated from write-side commands.
-- **Pipeline behaviors:** Validation, logging, and performance tracking are handled through MediatR pipeline behaviors.
-- **Infrastructure contracts:** External dependencies are represented by interfaces without concrete implementation details.
-
-#### 3. Infrastructure (`Infrastructure`)
-
-- **Role:** Manages persistence, data mappings, external systems, and cloud abstractions.
-- **Persistence management:** Implements EF Core mappings, migrations, repositories, and transaction boundaries.
-- **Pluggable architecture:** File storage, background processing, and notifications are implemented behind application interfaces.
-
-#### 4. Presentation API (`Ecommerce.Api`)
-
-- **Role:** Provides the HTTP entry point, routing, and request orchestration.
-- **Thin endpoints:** Controllers delegate execution to the MediatR pipeline.
-- **Cross-cutting HTTP concerns:** Handles exception middleware, identity, authorization, and API documentation.
-
----
-
-## Vertical Slice Architecture
-
-In addition to the horizontal Clean Architecture layers, the Application and API code are organized by **business capability** using Vertical Slice Architecture. Each slice owns the request flow for a specific use case instead of grouping every command, handler, validator, DTO, and mapping in separate global folders.
-
-```text
-Application/
-└── Features/
-    ├── Account/
-    │   ├── Commands/
-    │   │   ├── Login/
-    │   │   ├── Register/
-    │   │   └── RefreshToken/
-    │   └── Queries/
-    │       └── GetCurrent/
-    ├── Products/
-    │   ├── Commands/
-    │   │   └── UpdateProduct/
-    │   ├── Queries/
-    │   │   ├── GetProducts/
-    │   │   └── GetProductById/
-    │   ├── Dtos/
-    │   └── ProductMapping.cs
-    ├── Categories/
-    ├── Brands/
-    └── Discounts/
-```
-
-### A Vertical Slice Request Flow
-
-Each use case follows a focused path through the system:
+On top of the layers, the Application and API code is organized by **business capability** (vertical slices). Each slice owns its command/query, handler, validator, and DTOs:
 
 ```text
 HTTP Request
-    │
-    ▼
-Controller / Endpoint
-    │
-    ▼
-Command or Query
-    │
-    ▼
-Validator → MediatR Pipeline Behaviors
-    │
-    ▼
-Handler
-    │
-    ├── Domain entities and business rules
-    ├── Application abstractions
-    └── Infrastructure implementations
-    │
-    ▼
-HTTP Response / DTO
+    → Controller (thin: maps to command, sends via MediatR)
+    → FluentValidation (pipeline behavior)
+    → Command / Query Handler
+        → Domain entities and business rules
+        → Repository / storage / job abstractions
+    → UnitOfWork.Save → HTTP Response
 ```
 
-### Vertical Slice Design Rules
+### Pipeline Behaviors
 
-- **Feature ownership:** A feature owns the files required for its use cases, including commands, queries, handlers, validators, DTOs, and mappings.
-- **Use-case focus:** Each command or query represents one business operation and has a single handler.
-- **Thin presentation layer:** Controllers translate HTTP concerns and delegate execution to MediatR; business logic remains in the slice and domain.
-- **Explicit dependencies:** Slices depend on Application abstractions rather than concrete infrastructure services.
-- **Independent evolution:** Features can evolve independently without creating broad coupling between unrelated business capabilities.
-- **Shared code discipline:** Shared abstractions are introduced only when behavior is genuinely common across multiple slices.
-- **Read/write separation:** Queries are optimized for reading and projection, while commands enforce business rules and state changes.
+Every request passes through MediatR pipeline behaviors:
 
-### Clean Architecture and Vertical Slices Together
-
-These approaches solve different architectural concerns:
-
-| Concern | Approach |
+| Behavior | Responsibility |
 |---|---|
-| Dependency direction | Clean Architecture layers |
-| Business boundaries | Domain-driven design and bounded capabilities |
-| Request organization | Vertical slices by feature and use case |
-| Read/write separation | CQRS with MediatR |
-| External integrations | Application contracts with Infrastructure implementations |
+| `LoggingBehavior` | Logs every request; warns on slow requests (≥ 500 ms) |
+| `ValidationBehavior` | Runs all FluentValidation validators, fails with 400 |
+| `CachingBehavior` | Serves queries implementing `ICacheableQuery` from HybridCache (Redis + L1) |
+| `CacheInvalidationBehavior` | Evicts keys/tags declared by commands implementing `ICacheInvalidatingCommand` |
 
-The result is a codebase that is layered for dependency control but sliced vertically for discoverability, cohesion, and feature delivery.
+### Error Model
 
----
+Exceptions map to consistent HTTP responses via a global exception handler:
+
+| Exception | HTTP |
+|---|---|
+| `ValidationException` | 400 with field errors |
+| `DomainException` | 400 |
+| `NotFoundException` | 404 |
+| `UnauthorizedException` / `UnauthorizedAccessException` | 401 |
+| `ForbiddenException` | 403 |
+| `ConflictException` / `DbUpdateConcurrencyException` | 409 |
+| anything else | 500 (generic body, logged as error) |
+
+> [!NOTE]
+> Route parameters intentionally use plain `{id}` **without** the `{id:guid}` constraint: a malformed identifier fails model binding and returns **400** instead of a misleading 404 "endpoint not found".
+
+## Tech Stack
+
+| Concern | Technology |
+|---|---|
+| Runtime | .NET 10, ASP.NET Core controllers |
+| Persistence | EF Core 10 (SQL Server), repositories + UnitOfWork |
+| Identity | ASP.NET Core Identity (GUID keys) + JWT bearer |
+| Caching | HybridCache (L1 in-memory + Redis L2) with key/tag invalidation |
+| Background jobs | Hangfire (SQL Server storage, priority queues) |
+| Email | MailKit + RazorLight embedded Razor templates |
+| Media | SixLabors ImageSharp (resize/WebP) + Azure Blob Storage |
+| API docs | OpenAPI + Scalar UI |
+| Logging | Serilog (console) + request logging |
+| Tests | xUnit, Moq, FluentAssertions (~400 tests across 3 projects) |
+| CI | GitHub Actions: restore, vulnerability check, Release build with warnings-as-errors, tests |
 
 ## Project Structure
 
 ```text
 Ecommerce.Api/
-├── Application/
-│   ├── Abstractions/
-│   └── Features/
-│       ├── Account/
-│       ├── Brands/
-│       ├── Categories/
-│       ├── Discounts/
-│       └── Products/
-├── Domain/
-├── Infrastructure/
-├── Ecommerce.Api/
-│   ├── Controllers/
-│   └── Contracts/
-├── Application.Test/
-├── Domain.Test/
-└── Infrastructure.Test/
+├── Domain/                        # Entities, value objects, enums, invariants (no external deps*)
+├── Application/                   # Use cases: Features/<Area>/{Commands,Queries}, abstractions, behaviors
+│   ├── Abstractions/              # IRepository, IUnitOfWork, IStorageService, ICurrentUserService, …
+│   ├── Behaviors/                 # MediatR pipeline behaviors
+│   ├── Common/                    # Pagination, filters, checkout calculator, validation helpers
+│   └── Features/                  # Account, Brands, Categories, Products, Discounts, Carts,
+│                                  # Orders, Payments, PromoCodes, Inventories, Procurement,
+│                                  # Reviews, Newsletter
+├── Infrastructure/                # EF Core configurations + migrations, repositories, services
+│   ├── Persistenace/              # AppDbContext, configurations, migrations (sic — folder name)
+│   ├── Repositories/              # Generic Repository<T>, ProductRepository, UnitOfWork
+│   └── Services/                  # JWT, MailKit email, RazorLight, ImageSharp, Azure blobs, Hangfire
+├── Ecommerce.Api/                 # Presentation: Controllers (public + Admin), Contracts, middleware
+├── Domain.Test/                   # Domain invariants and state machines
+├── Application.Test/              # Handler behavior tests (xUnit + Moq + FluentAssertions)
+└── Infrastructure.Test/           # Repositories, JWT, email rendering, image service (EF InMemory)
 ```
 
-## Domain Capabilities & Business Context
+\* The single allowed Domain dependency is the Identity package for `AppUser : IdentityUser<Guid>` and `AppRole : IdentityRole<Guid>`.
 
-- **Catalog management:** Product hierarchies, brand mapping, variants, dynamic attributes, and media assets.
-- **Orders and carts:** Persistent cart state, stock validation, discount calculations, purchase-time price snapshots, and order state transitions.
-- **Inventory control:** Race-condition-resistant stock tracking to help prevent overselling during concurrent checkouts.
-- **Customer and identity:** Customer profiles, shipping address hierarchies, and secure user identity boundaries.
+## Domain Model
 
-## Project Status & Azure Roadmap
-
-The platform is actively being developed and prepared for cloud-native deployment on Microsoft Azure.
-
-| Local / development | Production target (Azure) |
+| Aggregate area | Aggregates / entities |
 |---|---|
-| Local SQL Server | Azure SQL Database |
-| Local file-system storage | Azure Blob Storage |
-| Local background jobs | Azure App Service or containers |
-| Local debugging | GitHub Actions CI/CD pipeline |
+| Identity | `AppUser`, `AppRole`, `RefreshToken` |
+| Catalog | `Category`, `Brand`, `Product` (+ `ProductImage`, `ProductAttribute`), `Discount` |
+| Commerce | `Cart` / `CartItem`, `Order` / `OrderItem` (snapshot lines), `PromoCode` |
+| Payments | `Payment`, `PaymentAttempt` |
+| Operations | `Inventory` / `InventoryTransaction`, `Supplier`, `PurchaseOrder`, `GoodsReceipt` |
+| Engagement | `Review`, `NewsletterSubscriber` |
 
-### Current Implementation State
+The full relational model is documented in [`ecommerce_erd.mmd`](./ecommerce_erd.mmd) (Mermaid ERD).
 
-- **Domain layer:** Core domain models, invariants, business constraints, and entity relationships are defined and stabilized.
-- **Infrastructure layer:** Relational schema design, entity configurations, repository abstractions, and primary migrations are established. File storage is abstracted behind interfaces.
-- **Application and API layers:** Handlers, command validators, and API endpoints are being built and refined.
+Key domain decisions:
 
-### Planned Azure Integration
+- **Order lines are immutable snapshots.** Product name (EN/AR), SKU, unit price, and discount amount are captured at purchase time; orders never change when the catalog changes.
+- **Checkout prevents overselling with optimistic concurrency.** Stock is decremented inside the unit of work, guarded by the `Inventory` rowversion token; a concurrent checkout gets a 409. Cancelling an order restores stock and records the restoring transaction.
+- **Money is `decimal(18,2)`, discount values `decimal(18,4)`.** Concurrency tokens (rowversion) protect `Product`, `Inventory`, `Order`-adjacent stock, `PromoCode`, `Payment`, and `PurchaseOrder`.
 
-- **Azure Blob Storage:** Replace local media storage with Azure Blob Storage using secure SAS tokens and managed identities.
-- **Azure SQL Database:** Provision managed SQL infrastructure with automated database migration steps.
-- **CI/CD automation:** Use GitHub Actions for continuous build verification, testing, and deployment on branch merges.
+## Getting Started
 
----
+### Prerequisites
 
-## Software Engineering & Domain Constraints
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- SQL Server (local or container) — connection string `DefaultConnection`
+- Redis — connection string `Redis` (used by HybridCache)
+- An SMTP account (optional for local runs; email sending is queued via Hangfire)
 
-1. **Strict dependency inversion:** The Domain project must not reference application, infrastructure, database-provider, or presentation projects. Its only framework dependency is the Identity package required by `AppUser` and `AppRole`; no other external dependencies are allowed.
-2. **Explicit nullability and code quality:** Nullable reference types and repository `.editorconfig` rules are enforced across the solution.
-3. **Immutable domain boundaries:** Entity IDs and core invariants are guarded against external modification.
-4. **Decoupled infrastructure contracts:** Storage, payment, and notification services implement interfaces defined by the Application layer.
+### Setup
 
-## Product Requirements
+1. Clone the repository:
 
-### Catalog & Inventory
-
-- Products support dynamic key-value attributes such as RAM, storage, and color, together with media galleries.
-- Stock reservation supports concurrent checkout scenarios.
-- Product pricing remains traceable through order price snapshots and price history.
-
-### Orders & Checkout
-
-- Carts validate line-item stock levels before checkout state transitions.
-- Orders create immutable order lines with product names and prices captured at purchase time.
-- Orders follow a strict state machine: `Pending` → `Processing` → `Shipped` → `Delivered` or `Cancelled`.
-
-### Media Assets
-
-- Upload routines validate MIME types, optimize assets, and return secure URI references.
-- Storage operations are decoupled through interfaces, allowing local development storage and Azure Blob Storage in production.
-
-### Non-Functional Requirements
-
-- **Maintainability:** Low coupling and high cohesion through Clean Architecture boundaries.
-- **Testability:** Domain logic is unit-testable without database connections, Identity infrastructure, or external service connections. The Identity package remains a compile-time dependency for the identity entity base classes.
-- **Traceability:** Strategic logging and domain state updates track critical operations throughout the application lifecycle.
-
-## Setup & Running Locally
-
-1. Clone the repository and navigate to the project directory:
-
-   ```powershell
-   cd C:\codes\Ecommerce.Api
+   ```bash
+   git clone https://github.com/Darkness00132/Ecommerce.Api.git
+   cd Ecommerce.Api
    ```
 
-2. Configure the database connection string in `appsettings.Development.json`.
-3. Apply the EF Core database migrations:
+2. Configure `Ecommerce.Api/appsettings.Development.json` (or user secrets):
 
-   ```powershell
+   | Setting | Purpose |
+   |---|---|
+   | `ConnectionStrings:DefaultConnection` | SQL Server database |
+   | `ConnectionStrings:Redis` | Redis for the distributed cache |
+   | `Jwt` | Issuer, audience, signing key, token lifetimes |
+   | `Email` | SMTP host/credentials and from address |
+   | `AzureStorage` | Blob container connection string |
+   | `Shipping:Fee` | Flat shipping fee applied at checkout |
+   | `FrontendUrl` | Base URL used in confirmation/reset email links |
+
+3. Apply the database migrations:
+
+   ```bash
    dotnet ef database update --project Infrastructure --startup-project Ecommerce.Api
    ```
 
-4. Build the solution:
+4. Build and run:
 
-   ```powershell
+   ```bash
    dotnet build
-   ```
-
-5. Run the automated tests:
-
-   ```powershell
-   dotnet test
-   ```
-
-6. Run the API:
-
-   ```powershell
    dotnet run --project Ecommerce.Api
    ```
 
-7. Open `https://localhost:<port>/scalar` to view the API documentation. Use Scalar's **Authorize** control to enter a JWT access token as `Bearer <token>` when testing protected endpoints.
+5. Open the root URL (`https://localhost:<port>/`) for the **Scalar** API reference. Use its **Authorize** control with `Bearer <access-token>` for protected endpoints.
 
----
+> [!IMPORTANT]
+> On startup the API seeds the roles and a SuperAdmin account (`owner@ecommerce.com` / `Admin#123`). This exists for local development only — change or remove the seeding block in `Program.cs` before any real deployment.
+
+Useful local URLs:
+
+| Tool | URL |
+|---|---|
+| Scalar API reference | `/` |
+| Health check | `/health` |
+| Hangfire dashboard | `/hangfire` |
+
+> [!WARNING]
+> The Hangfire dashboard currently has no authentication configured. Restrict it before deploying.
 
 ## Authentication & Authorization
 
-The API supports mobile and web clients:
+Two client styles are supported:
 
-- **Mobile/native:** Uses JWT bearer tokens through `/api/account/login`.
-- **Web:** `/api/account/login-web` returns a JWT for the `Authorization` header and sets an `HttpOnly` secure cookie for the refresh token.
+- **Native / mobile:** `POST /api/account/login` returns an access token + refresh token pair. Refresh with `POST /api/account/refresh`; revoke with `POST /api/account/logout`.
+- **Web:** `GET /api/account/csrf-web` issues an antiforgery token; `POST /api/account/login-web` (with the `X-XSRF-TOKEN` header) returns the access token and stores the refresh token in a secure `HttpOnly` cookie. Refresh and revoke happen through `refresh-web` / `revoke-web`.
+
+Authorization is role-based. Roles are seeded at startup and combined into policy-like constants:
+
+| Constant | Roles included | Guards |
+|---|---|---|
+| `CatalogAdministrators` | SuperAdmin, Admin, CatalogManager | Brands, categories, products, discounts |
+| `InventoryAdministrators` | SuperAdmin, Admin, InventoryManager | Inventories |
+| `ProcurementAdministrators` | SuperAdmin, Admin, ProcurementManager | Suppliers, purchase orders, goods receipts |
+| `SalesAdministrators` | SuperAdmin, Admin, SalesManager | Orders, payments, promo codes |
+| `SupportUsers` | SuperAdmin, Admin, SupportAgent | Review moderation |
+| `Administrators` | SuperAdmin, Admin | Newsletter subscribers |
+
+New registrations receive the `Customer` role automatically. Failed logins count toward lockout (5 attempts → 30 minutes).
+
+## API Surface
+
+The Scalar UI is the source of truth. High-level groups:
+
+<details>
+<summary>Endpoint groups (click to expand)</summary>
+
+| Group | Route | Access |
+|---|---|---|
+| Account | `/api/account/*` | Anonymous + authenticated |
+| Categories (public) | `/api/categories` | Anonymous |
+| Brands (public) | `/api/brands` | Anonymous |
+| Products (public storefront, active only) | `/api/products` | Anonymous |
+| Cart + checkout summary | `/api/cart` | Authenticated |
+| Orders (place, view, cancel) | `/api/orders` | Authenticated |
+| Reviews (list, create, update) | `/api/reviews` | Anonymous / Authenticated |
+| Newsletter (subscribe, unsubscribe) | `/api/newsletter` | Anonymous |
+| Category / Brand / Product / Discount management | `/api/admin/*` | `CatalogAdministrators` |
+| Inventory management | `/api/admin/inventories` | `InventoryAdministrators` |
+| Suppliers / Purchase orders / Goods receipts | `/api/admin/*` | `ProcurementAdministrators` |
+| Orders / Payments / Promo codes | `/api/admin/*` | `SalesAdministrators` |
+| Review moderation | `DELETE /api/reviews/{id}` | `SupportUsers` |
+| Newsletter subscribers | `/api/newsletter/subscribers` | `Administrators` |
+
+</details>
+
+Conventions worth knowing as a consumer:
+
+- Identifiers are GUIDs; malformed identifiers return **400**.
+- Missing resources return **404**; business-rule violations (empty cart, insufficient stock, duplicate names/codes) return **409**.
+- List endpoints are paginated: `?pageNumber=1&pageSize=20` (max 100), returning `PagedResult<T>`.
+
+## Testing
+
+```bash
+dotnet test
+```
+
+Tests follow **behavior-driven unit testing**: test classes and methods are named as business rules (for example `The_Order_Lines_Carry_The_Product_Name_And_SKU_Snapshots`), exercise only the public `Handle` of a use case, and assert observable outcomes through the repository/service abstractions — never implementation details. This keeps the suite resistant to refactoring.
+
+| Project | Covers |
+|---|---|
+| `Domain.Test` | Entity invariants, state machines, value objects |
+| `Application.Test` | Handlers per feature: happy paths, failure paths, compensation logic |
+| `Infrastructure.Test` | Repositories (EF InMemory), JWT generation, email rendering, image resizing |
+
+CI (`.github/workflows/ci.yml`) runs restore, `dotnet list package --vulnerable`, a Release build with warnings treated as errors, and the full test suite on every push/PR to `master`.
+
+## Roadmap
+
+- [ ] Card/wallet payments behind an `IPaymentGateway` application contract (COD only today)
+- [ ] Two-factor authentication (TOTP)
+- [ ] Shipping fee calculation by address/weight instead of a flat setting
+- [ ] Azure deployment: Azure SQL, Azure Blob Storage with SAS, CI/CD to Azure App Service
+- [ ] Low-stock alerting via Hangfire recurring jobs
 
 ## License
 
-This repository is public for portfolio evaluation, code review, and educational purposes only. The source code is licensed under the [PolyForm NonCommercial License 1.0.0](./LICENSE.md), which prohibits commercial, business, or production use by third parties.
+This repository is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE.md): you may study and adapt the code non-commercially, but commercial or production use by third parties is prohibited.
 
-For commercial licensing, white-labeling, or other usage inquiries, contact **mustafamohamedanwar1@gmail.com**.
+For commercial licensing or usage inquiries, contact **mustafamohamedanwar1@gmail.com**.
