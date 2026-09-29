@@ -61,7 +61,7 @@ public sealed class PurchaseOrderItem : Entity
         OrderedQuantity += quantity;
     }
 
-    internal void Receive(int quantity)
+    public void Receive(int quantity)
     {
         if (quantity <= 0) {
             throw new DomainException(
