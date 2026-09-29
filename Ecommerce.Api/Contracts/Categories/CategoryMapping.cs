@@ -1,4 +1,3 @@
-using Api.Contracts.Categories;
 using Application.Features.Categories.Commands.CreateCategory;
 using Application.Features.Categories.Commands.UpdateCategory;
 using AutoMapper;

@@ -5,7 +5,7 @@ namespace Application.Features.Categories.Queries.GetCategoryById;
 
 public sealed record GetCategoryByIdQuery(Guid Id) : ICacheableQuery<CategoryDto>
 {
-    public string CacheKey => CacheNames.Categories;
+    public string CacheKey => $"{CacheNames.Categories}:{Id}";
 
     public IReadOnlyCollection<string> Tags => [CacheNames.Categories];
 

@@ -6,10 +6,10 @@ namespace Application.Features.Categories.Commands.UpdateCategory;
 
 public sealed record UpdateCategoryCommand(
     Guid Id,
-    string? NameEn,
-    string? NameAr,
-    string? DescriptionEn,
-    string? DescriptionAr,
+    string NameEn,
+    string NameAr,
+    string DescriptionEn,
+    string DescriptionAr,
     FileDto? NewImage) : ICacheInvalidatingCommand
 {
     public IReadOnlyCollection<string> CacheKeys

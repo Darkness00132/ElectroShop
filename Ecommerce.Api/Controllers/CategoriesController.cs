@@ -1,4 +1,3 @@
-using Application.Common.Pagination;
 using Application.Features.Categories.Dtos;
 using Application.Features.Categories.Queries.GetCategories;
 using Application.Features.Categories.Queries.GetCategoryById;
@@ -12,57 +11,53 @@ namespace Ecommerce.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/categories")]
-public sealed class CategoriesController : ControllerBase
+[Produces("application/json")]
+public sealed class CategoriesController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="CategoriesController"/> class.
+    /// Retrieves all categories sorted by English name.
     /// </summary>
-    /// <param name="sender">The mediator sender used to dispatch application requests.</param>
-    public CategoriesController(ISender sender)
-    {
-        _sender = sender;
-    }
-
-    /// <summary>
-    /// Retrieves a paginated list of categories.
-    /// </summary>
-    /// <param name="cancellationToken">A token used to cancel the request.</param>
-    /// <returns>A paginated list of categories.</returns>
-    /// <response code="200">Returns the paginated categories.</response>
-    /// <response code="400">The pagination request is invalid.</response>
+    /// <remarks>
+    /// No authentication is required. Each category carries both the English (En) and Arabic (Ar)
+    /// name and description together with its image key. The result is served from cache and is
+    /// refreshed whenever a category is created or updated.
+    /// </remarks>
+    /// <response code="200">The categories were retrieved successfully.</response>
+    /// <response code="400">The request is invalid.</response>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The collection of available categories.</returns>
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<CategoryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<CategoryDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetCategories(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<CategoryDto>>> GetCategories(
+        CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
-            new GetCategoriesQuery(),
-            cancellationToken);
+        var categories = await sender.Send(new GetCategoriesQuery(), cancellationToken);
 
-        return Ok(result);
+        return Ok(categories);
     }
 
     /// <summary>
-    /// Retrieves a category by its identifier.
+    /// Retrieves a single category by its identifier.
     /// </summary>
+    /// <remarks>
+    /// No authentication is required. The result is served from cache and is refreshed
+    /// whenever that category is updated.
+    /// </remarks>
+    /// <response code="200">The category was retrieved successfully.</response>
+    /// <response code="404">No category exists with the supplied identifier.</response>
     /// <param name="id">The category identifier.</param>
-    /// <param name="cancellationToken">A token used to cancel the request.</param>
+    /// <param name="cancellationToken">The request cancellation token.</param>
     /// <returns>The requested category.</returns>
-    /// <response code="200">Returns the requested category.</response>
-    /// <response code="404">The category was not found.</response>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
     [ProducesResponseType(typeof(CategoryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetCategoryById(
+    public async Task<ActionResult<CategoryDto>> GetCategoryById(
         Guid id,
         CancellationToken cancellationToken)
     {
-        var result = await _sender.Send(
-            new GetCategoryByIdQuery(id),
-            cancellationToken);
+        var category = await sender.Send(new GetCategoryByIdQuery(id), cancellationToken);
 
-        return Ok(result);
+        return Ok(category);
     }
 }

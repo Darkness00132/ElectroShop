@@ -78,7 +78,7 @@ public sealed class ProductsController : ControllerBase
     /// <response code="404">
     /// The product was not found or is not active.
     /// </response>
-    [HttpGet("{id:guid}")]
+    [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProductById(
