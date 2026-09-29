@@ -17,7 +17,7 @@ public sealed class CreateDiscountCommandValidator
             .GreaterThanOrEqualTo(x => x.StartDate);
 
         RuleFor(x => x.Value)
-            .LessThanOrEqualTo(1)
+            .LessThanOrEqualTo(100)
             .When(x => x.DiscountType == DiscountType.Percentage);
     }
 }

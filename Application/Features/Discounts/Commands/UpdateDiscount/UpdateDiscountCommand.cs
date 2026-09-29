@@ -15,5 +15,6 @@ public record UpdateDiscountCommand(Guid Id,
     public IReadOnlyCollection<string> CacheKeys
         => [CacheNames.Discounts, $"{CacheNames.Discounts}:{Id}"];
 
-    public IReadOnlyCollection<string> CacheTags => [];
+    public IReadOnlyCollection<string> CacheTags
+        => [CacheNames.Products];
 }

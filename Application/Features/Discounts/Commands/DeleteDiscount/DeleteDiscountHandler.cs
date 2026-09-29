@@ -1,38 +1,16 @@
 using Application.Abstractions.Repositories;
-using Application.Features.Discounts.Commands.DeleteDiscount;
+using Application.Exceptions;
 using Domain.Entities.Catalog;
-using Domain.Exceptions;
 using MediatR;
 
-namespace Application.Features.Discounts.Commands.DeleteDiscount
-{
-    internal class DeleteDiscountHandler : IRequestHandler<DeleteDiscountCommand>
-    {
-        private readonly IRepository<Discount> _discountRepository;
-        private readonly IUnitOfWork _unitOfWork;
+namespace Application.Features.Discounts.Commands.DeleteDiscount;
 
-        public DeleteDiscountHandler(IRepository<Discount> discountRepository, IUnitOfWork unitOfWork)
-        {
-            _discountRepository = discountRepository;
-            _unitOfWork = unitOfWork;
-        }
-
-        public Task Handle(DeleteDiscountCommand request, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
-        }
-    }
-}
-
-internal sealed class DeleteDiscountHandler
-    : IRequestHandler<DeleteDiscountCommand>
+internal class DeleteDiscountHandler : IRequestHandler<DeleteDiscountCommand>
 {
     private readonly IRepository<Discount> _discountRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public DeleteDiscountHandler(
-        IRepository<Discount> discountRepository,
-        IUnitOfWork unitOfWork)
+    public DeleteDiscountHandler(IRepository<Discount> discountRepository, IUnitOfWork unitOfWork)
     {
         _discountRepository = discountRepository;
         _unitOfWork = unitOfWork;
@@ -44,9 +22,8 @@ internal sealed class DeleteDiscountHandler
             request.Id,
             cancellationToken);
 
-        if (discount is null) {
-            throw new DomainException("Discount was not found.");
-        }
+        if (discount is null)
+            throw new NotFoundException(nameof(Discount), request.Id);
 
         _discountRepository.Remove(discount);
 

@@ -23,6 +23,9 @@ internal class CreateDiscountHandler : IRequestHandler<CreateDiscountCommand, Gu
             request.Value,
             new DateRange(request.StartDate, request.EndDate));
 
+        if (!request.IsActive)
+            discount.Deactivate();
+
         await _discountRepository.AddAsync(discount, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
