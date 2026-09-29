@@ -37,7 +37,13 @@ public static class DI
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
 
-        services.AddIdentity<AppUser, AppRole>()
+        services.AddIdentity<AppUser, AppRole>(options => {
+            options.User.RequireUniqueEmail = true;
+
+            options.Lockout.AllowedForNewUsers = true;
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
+        })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 

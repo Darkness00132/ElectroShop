@@ -85,6 +85,10 @@ public class RegisterAccountCommandHandlerTests
             x => x.GenerateEmailConfirmationTokenAsync(It.IsAny<AppUser>()),
             Times.Once);
 
+        _userManagerMock.Verify(
+            x => x.AddToRoleAsync(It.IsAny<AppUser>(), Domain.Constants.AppRoles.Customer),
+            Times.Once);
+
     }
 
     [Fact]

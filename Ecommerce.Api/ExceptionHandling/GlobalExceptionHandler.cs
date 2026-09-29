@@ -61,6 +61,12 @@ public sealed class GlobalExceptionHandler(
                     StatusCodes.Status401Unauthorized,
                     ex.Message),
 
+            UnauthorizedAccessException
+                => CreateProblemDetails(
+                    context,
+                    StatusCodes.Status401Unauthorized,
+                    "Authentication failed."),
+
             ForbiddenException ex
                 => CreateProblemDetails(
                     context,

@@ -2,6 +2,7 @@ using Application.Abstractions.Repositories;
 using Application.Abstractions.Services;
 using Application.Exceptions;
 using Application.Features.Account.Dto;
+using Domain.Constants;
 using Domain.Entities.Carts;
 using Domain.Entities.Identity;
 using Domain.ValueObjects;
@@ -39,6 +40,8 @@ internal class RegisterAccountCommandHandler : IRequestHandler<RegisterAccountCo
         if (!result.Succeeded) {
             throw new ValidationException(result.Errors.GroupBy(x => x.Code).ToDictionary(x => x.Key, x => x.Select(e => e.Description).ToArray()));
         }
+
+        await _userManager.AddToRoleAsync(user, AppRoles.Customer);
 
         var cart = new Cart(user.Id);
         await _cartRepository.AddAsync(cart);

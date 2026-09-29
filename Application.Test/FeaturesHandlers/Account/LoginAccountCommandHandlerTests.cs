@@ -83,6 +83,58 @@ public class LoginAccountCommandHandlerTests
 
         // Assert
         await act.Should().ThrowAsync<UnauthorizedAccessException>();
+
+        _userManager.Verify(
+            x => x.AccessFailedAsync(user),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task A_Locked_Out_User_Cannot_Log_In()
+    {
+        // Arrange
+        var user = CreateUser(_command.Email);
+
+        _userManager
+            .Setup(x => x.FindByEmailAsync(_command.Email))
+            .ReturnsAsync(user);
+
+        _userManager
+            .Setup(x => x.IsLockedOutAsync(user))
+            .ReturnsAsync(true);
+
+        // Act
+        var act = () => _sut.Handle(_command, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
+
+        _userManager.Verify(
+            x => x.CheckPasswordAsync(It.IsAny<AppUser>(), It.IsAny<string>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task A_Successful_Login_Resets_The_Failed_Access_Count()
+    {
+        // Arrange
+        var user = CreateUser(_command.Email);
+
+        _userManager
+            .Setup(x => x.FindByEmailAsync(_command.Email))
+            .ReturnsAsync(user);
+
+        _userManager
+            .Setup(x => x.CheckPasswordAsync(user, _command.Password))
+            .ReturnsAsync(true);
+
+        // Act
+        await _sut.Handle(_command, CancellationToken.None);
+
+        // Assert
+        _userManager.Verify(
+            x => x.ResetAccessFailedCountAsync(user),
+            Times.Once);
     }
 
     private static AppUser CreateUser(string email)

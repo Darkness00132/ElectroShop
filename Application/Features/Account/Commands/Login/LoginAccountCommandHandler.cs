@@ -22,15 +22,17 @@ internal class LoginAccountCommandHandler
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
 
-        if (user is null)
+        if (user is null || await _userManager.IsLockedOutAsync(user))
             throw new UnauthorizedAccessException("Invalid email or password.");
 
-        var isCorrectPassword = await _userManager.CheckPasswordAsync(user, request.Password);
+        if (!await _userManager.CheckPasswordAsync(user, request.Password)) {
+            await _userManager.AccessFailedAsync(user);
 
-        if (!isCorrectPassword)
             throw new UnauthorizedAccessException("Invalid email or password.");
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
 
         return await _tokenService.CreateAsync(user, cancellationToken);
     }
 }
-
