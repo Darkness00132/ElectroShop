@@ -79,7 +79,7 @@ public class AccountTokenServiceTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<RefreshToken, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<RefreshToken, object>>[]>()))
+                It.IsAny<Expression<Func<RefreshToken, object?>>[]>()))
             .ReturnsAsync(refreshToken);
 
         _jwtTokenService
@@ -111,7 +111,7 @@ public class AccountTokenServiceTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<RefreshToken, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<RefreshToken, object>>[]>()))
+                It.IsAny<Expression<Func<RefreshToken, object?>>[]>()))
             .ReturnsAsync((RefreshToken?)null);
 
         // Act
@@ -139,7 +139,7 @@ public class AccountTokenServiceTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<RefreshToken, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<RefreshToken, object>>[]>()))
+                It.IsAny<Expression<Func<RefreshToken, object?>>[]>()))
             .ReturnsAsync(refreshToken);
 
         // Act
@@ -168,7 +168,7 @@ public class AccountTokenServiceTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<RefreshToken, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<RefreshToken, object>>[]>()))
+                It.IsAny<Expression<Func<RefreshToken, object?>>[]>()))
             .ReturnsAsync(refreshToken);
 
         // Act
@@ -188,7 +188,7 @@ public class AccountTokenServiceTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<RefreshToken, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<RefreshToken, object>>[]>()))
+                It.IsAny<Expression<Func<RefreshToken, object?>>[]>()))
             .ReturnsAsync((RefreshToken?)null);
 
         // Act

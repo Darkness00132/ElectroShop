@@ -33,7 +33,7 @@ internal class Repository<TEntity> : IRepository<TEntity>
     public async Task<TEntity?> SingleOrDefaultAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] includes)
+        params Expression<Func<TEntity, object?>>[] includes)
     {
         return await ApplyIncludes(_dbSet.AsQueryable(), includes)
             .SingleOrDefaultAsync(predicate, cancellationToken);
@@ -42,7 +42,7 @@ internal class Repository<TEntity> : IRepository<TEntity>
     public async Task<IReadOnlyList<TEntity>> ListAsync(
         Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] includes)
+        params Expression<Func<TEntity, object?>>[] includes)
     {
         var query = ApplyIncludes(_dbSet.AsQueryable(), includes);
 
@@ -127,7 +127,7 @@ internal class Repository<TEntity> : IRepository<TEntity>
 
     private static IQueryable<TEntity> ApplyIncludes(
         IQueryable<TEntity> query,
-        Expression<Func<TEntity, object>>[] includes)
+        Expression<Func<TEntity, object?>>[] includes)
     {
         foreach (var include in includes)
             query = query.Include(include);

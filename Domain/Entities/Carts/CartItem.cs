@@ -21,7 +21,9 @@ public sealed class CartItem : IEntity
     public decimal LineSubtotal => Product.Price * Quantity;
 
     [NotMapped]
-    public decimal LineDiscount => Product.Discount?.CalculateDiscountAmount(Product.Price) ?? 0 * Quantity;
+    public decimal LineDiscount => Product.Discount is { IsActive: true }
+        ? Product.Discount.CalculateDiscountAmount(Product.Price) * Quantity
+        : 0m;
 
     [NotMapped]
     public decimal LineTotal => LineSubtotal - LineDiscount;

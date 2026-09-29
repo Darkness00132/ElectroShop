@@ -73,7 +73,7 @@ public sealed class Discount : Entity
 
     public void Deactivate() => IsVisible = false;
 
-    internal decimal CalculateDiscountAmount(decimal originalPrice)
+    public decimal CalculateDiscountAmount(decimal originalPrice)
     {
         if (originalPrice <= 0)
             throw new DomainException("Original price must be greater than zero.");

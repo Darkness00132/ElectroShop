@@ -207,7 +207,7 @@ public class UpdateProductHandlerTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<Product, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<Product, object>>[]>()))
+                It.IsAny<Expression<Func<Product, object?>>[]>()))
             .ReturnsAsync((Product?)null);
 
         // Act
@@ -253,7 +253,7 @@ public class UpdateProductHandlerTests
             .Setup(x => x.SingleOrDefaultAsync(
                 It.IsAny<Expression<Func<Product, bool>>>(),
                 It.IsAny<CancellationToken>(),
-                It.IsAny<Expression<Func<Product, object>>[]>()))
+                It.IsAny<Expression<Func<Product, object?>>[]>()))
             .ReturnsAsync(product);
     }
 

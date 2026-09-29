@@ -15,12 +15,12 @@ public interface IRepository<TEntity>
     Task<TEntity?> SingleOrDefaultAsync(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] includes);
+        params Expression<Func<TEntity, object?>>[] includes);
 
     Task<IReadOnlyList<TEntity>> ListAsync(
         Expression<Func<TEntity, bool>>? predicate = null,
         CancellationToken cancellationToken = default,
-        params Expression<Func<TEntity, object>>[] includes);
+        params Expression<Func<TEntity, object?>>[] includes);
 
     Task<TResponse?> ProjectToSingleOrDefaultAsync<TResponse>(
         Expression<Func<TEntity, bool>> predicate,
