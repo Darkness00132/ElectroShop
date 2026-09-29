@@ -44,6 +44,7 @@ public sealed class Inventory : AggregateRoot
 
     public void IncreaseStock(
         int quantity,
+        Guid? orderId = null,
         Guid? goodsReceiptId = null,
         string? notes = null)
     {
@@ -58,7 +59,7 @@ public sealed class Inventory : AggregateRoot
             quantity,
             quantityBefore,
             QuantityOnHand,
-            null,
+            orderId,
             goodsReceiptId,
             notes
         );

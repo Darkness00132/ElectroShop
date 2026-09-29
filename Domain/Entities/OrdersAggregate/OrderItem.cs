@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 using Domain.Common;
 using Domain.Entities.Catalog;
 using Domain.Exceptions;
@@ -15,6 +16,15 @@ public sealed class OrderItem : IEntity
     public Order Order { get; private set; } = null!;
 
     public Product Product { get; private set; } = null!;
+
+    [MaxLength(200)]
+    public string ProductNameEn { get; private set; } = null!;
+
+    [MaxLength(200)]
+    public string ProductNameAr { get; private set; } = null!;
+
+    [MaxLength(100)]
+    public string SKU { get; private set; } = null!;
 
     public int Quantity { get; private set; }
 
@@ -38,6 +48,9 @@ public sealed class OrderItem : IEntity
     internal OrderItem(
         Guid orderId,
         Guid productId,
+        string productNameEn,
+        string productNameAr,
+        string sku,
         int quantity,
         decimal unitPrice,
         decimal discountAmount = 0)
@@ -47,6 +60,15 @@ public sealed class OrderItem : IEntity
 
         if (productId == Guid.Empty)
             throw new DomainException("Product id is required.");
+
+        if (string.IsNullOrWhiteSpace(productNameEn))
+            throw new DomainException("English product name is required.");
+
+        if (string.IsNullOrWhiteSpace(productNameAr))
+            throw new DomainException("Arabic product name is required.");
+
+        if (string.IsNullOrWhiteSpace(sku))
+            throw new DomainException("Product SKU is required.");
 
         if (quantity <= 0)
             throw new DomainException("Quantity must be greater than zero.");
@@ -59,6 +81,9 @@ public sealed class OrderItem : IEntity
 
         OrderId = orderId;
         ProductId = productId;
+        ProductNameEn = productNameEn.Trim();
+        ProductNameAr = productNameAr.Trim();
+        SKU = sku.Trim();
         Quantity = quantity;
         UnitPrice = unitPrice;
         DiscountAmount = discountAmount;

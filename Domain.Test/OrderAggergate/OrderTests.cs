@@ -36,6 +36,9 @@ public class OrderTests
         // Act
         order.AddItem(
             Guid.NewGuid(),
+            "Gaming Laptop",
+            "لابتوب ألعاب",
+            "SKU-001",
             quantity,
             unitPrice,
             discountAmount);
@@ -53,10 +56,10 @@ public class OrderTests
         var order = CreateValidOrder();
         var productId = Guid.NewGuid();
 
-        order.AddItem(productId, 2, 100);
+        order.AddItem(productId, "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 2, 100);
 
         // Act
-        order.AddItem(productId, 3, 100);
+        order.AddItem(productId, "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 3, 100);
 
         // Assert
         order.Items.Should().ContainSingle();
@@ -74,7 +77,7 @@ public class OrderTests
     {
         // Arrange
         var order = CreateValidOrder();
-        order.AddItem(Guid.NewGuid(), 2, 100);
+        order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 2, 100);
 
         // Act
         order.SetShippingFee(shippingFee);
@@ -96,7 +99,7 @@ public class OrderTests
         var order = CreateValidOrder();
         var promoCodeId = Guid.NewGuid();
 
-        order.AddItem(Guid.NewGuid(), 2, 100);
+        order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 2, 100);
 
         // Act
         order.ApplyPromoCode(
@@ -114,7 +117,7 @@ public class OrderTests
     {
         // Arrange
         var order = CreateValidOrder();
-        order.AddItem(Guid.NewGuid(), 2, 100);
+        order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 2, 100);
         order.ApplyPromoCode(Guid.NewGuid(), 30);
 
         // Act
@@ -162,7 +165,7 @@ public class OrderTests
     {
         // Arrange
         var order = CreateValidOrder();
-        order.AddItem(Guid.NewGuid(), 1, 100);
+        order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
 
         // Act
         order.Confirm();
@@ -180,7 +183,7 @@ public class OrderTests
     {
         // Arrange
         var order = CreateValidOrder();
-        order.AddItem(Guid.NewGuid(), 1, 100);
+        order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
         order.Confirm();
         order.StartProcessing();
         order.Ship();
@@ -199,7 +202,7 @@ public class OrderTests
     {
         // Arrange
         var order = CreateValidOrder();
-        order.AddItem(Guid.NewGuid(), 1, 100);
+        order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
 
         // Act
         order.Cancel();
@@ -222,7 +225,7 @@ public class OrderTests
         var order = CreateOrderInStatus(status);
 
         // Act
-        var act = () => order.AddItem(Guid.NewGuid(), 1, 100);
+        var act = () => order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
 
         // Assert
         act.Should().Throw<DomainException>();
@@ -323,25 +326,25 @@ public class OrderTests
                 break;
 
             case OrderStatus.Confirmed:
-                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
                 order.Confirm();
                 break;
 
             case OrderStatus.Processing:
-                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
                 order.Confirm();
                 order.StartProcessing();
                 break;
 
             case OrderStatus.Shipped:
-                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
                 order.Confirm();
                 order.StartProcessing();
                 order.Ship();
                 break;
 
             case OrderStatus.Delivered:
-                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
                 order.Confirm();
                 order.StartProcessing();
                 order.Ship();
@@ -353,7 +356,7 @@ public class OrderTests
                 break;
 
             case OrderStatus.Refunded:
-                order.AddItem(Guid.NewGuid(), 1, 100);
+                order.AddItem(Guid.NewGuid(), "Gaming Laptop", "لابتوب ألعاب", "SKU-001", 1, 100);
                 order.Confirm();
                 order.StartProcessing();
                 order.Ship();

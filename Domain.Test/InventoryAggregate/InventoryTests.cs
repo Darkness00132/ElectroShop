@@ -243,7 +243,7 @@ public class InventoryTests
         var goodsReceiptId = Guid.NewGuid();
 
         // Act
-        inventory.IncreaseStock(10, goodsReceiptId);
+        inventory.IncreaseStock(10, goodsReceiptId: goodsReceiptId);
 
         // Assert
         var transaction = inventory.Transactions.Single();

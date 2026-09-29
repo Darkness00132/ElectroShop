@@ -65,6 +65,9 @@ public sealed class Order : AggregateRoot
 
     public void AddItem(
         Guid productId,
+        string productNameEn,
+        string productNameAr,
+        string sku,
         int quantity,
         decimal unitPrice,
         decimal discountAmount = 0)
@@ -94,6 +97,9 @@ public sealed class Order : AggregateRoot
         _items.Add(new OrderItem(
             orderId: Id,
             productId: productId,
+            productNameEn: productNameEn,
+            productNameAr: productNameAr,
+            sku: sku,
             quantity: quantity,
             unitPrice: unitPrice,
             discountAmount: discountAmount));

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Api.ExceptionHandling;
 
@@ -65,6 +66,12 @@ public sealed class GlobalExceptionHandler(
                     context,
                     StatusCodes.Status403Forbidden,
                     ex.Message),
+
+            DbUpdateConcurrencyException
+                => CreateProblemDetails(
+                    context,
+                    StatusCodes.Status409Conflict,
+                    "The operation conflicts with a concurrent change. Please retry."),
 
             DomainException ex
                 => CreateProblemDetails(

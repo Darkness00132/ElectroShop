@@ -3,6 +3,7 @@ using Application.Features.Carts.Commands.ClearCart;
 using Application.Features.Carts.Commands.RemoveCartItem;
 using Application.Features.Carts.Commands.UpdateCartItem;
 using Application.Features.Carts.Dtos;
+using Application.Features.Carts.Queries.GetCheckoutSummary;
 using Application.Features.Carts.Queries.GetMyCart;
 using Ecommerce.Api.Contracts.Carts;
 using MediatR;
@@ -44,6 +45,27 @@ public sealed class CartController(ISender sender) : ControllerBase
         var cart = await sender.Send(new GetMyCartQuery(), cancellationToken);
 
         return Ok(cart);
+    }
+
+    /// <summary>
+    /// Retrieves the checkout summary of the cart: live prices, active discounts,
+    /// available stock, and the computed totals including the shipping fee.
+    /// </summary>
+    /// <response code="200">The checkout summary was retrieved successfully.</response>
+    /// <response code="401">The user is not authenticated.</response>
+    /// <response code="409">The cart is empty.</response>
+    /// <param name="cancellationToken">The request cancellation token.</param>
+    /// <returns>The checkout summary.</returns>
+    [HttpGet("checkout")]
+    [ProducesResponseType(typeof(CheckoutSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<CheckoutSummaryDto>> GetCheckoutSummary(
+        CancellationToken cancellationToken)
+    {
+        var summary = await sender.Send(new GetCheckoutSummaryQuery(), cancellationToken);
+
+        return Ok(summary);
     }
 
     /// <summary>
