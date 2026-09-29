@@ -9,6 +9,7 @@ namespace Domain.Entities.Catalog;
 public sealed class Product : AggregateRoot
 {
     private readonly List<ProductImage> _images = new();
+    private readonly List<ProductAttribute> _attributes = new();
 
     [MaxLength(200)]
     public string NameEn { get; private set; } = null!;
@@ -46,6 +47,8 @@ public sealed class Product : AggregateRoot
     public byte[] RowVersion { get; private set; } = Array.Empty<byte>();
 
     public IReadOnlyCollection<ProductImage> Images => _images.AsReadOnly();
+
+    public IReadOnlyCollection<ProductAttribute> Attributes => _attributes.AsReadOnly();
 
     private Product() { } // Required for EF Core
 
@@ -170,6 +173,39 @@ public sealed class Product : AggregateRoot
             return;
 
         _images.Remove(image);
+        Touch();
+    }
+
+    public void AddAttribute(string name, string value)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("Product attribute name is required.");
+
+        var trimmedName = name.Trim();
+
+        var existingAttribute = _attributes.FirstOrDefault(x => x.Name == trimmedName);
+
+        if (existingAttribute is not null) {
+            existingAttribute.UpdateValue(value);
+            Touch();
+            return;
+        }
+
+        _attributes.Add(new ProductAttribute(Id, trimmedName, value));
+        Touch();
+    }
+
+    public void RemoveAttribute(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        var trimmedName = name.Trim();
+        var attribute = _attributes.FirstOrDefault(x => x.Name == trimmedName);
+
+        if (attribute is null)
+            return;
+
+        _attributes.Remove(attribute);
         Touch();
     }
 

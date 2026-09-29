@@ -26,6 +26,7 @@ public class ApplicationDbContext
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
+    public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
     public DbSet<Discount> Discounts => Set<Discount>();
 
     public DbSet<Cart> Carts => Set<Cart>();
@@ -105,6 +106,12 @@ public class ApplicationDbContext
 
         builder.Entity<Product>()
             .HasMany(x => x.Images)
+            .WithOne(x => x.Product)
+            .HasForeignKey(x => x.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Product>()
+            .HasMany(x => x.Attributes)
             .WithOne(x => x.Product)
             .HasForeignKey(x => x.ProductId)
             .OnDelete(DeleteBehavior.Cascade);

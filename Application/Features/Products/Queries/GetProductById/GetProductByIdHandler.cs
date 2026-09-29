@@ -18,7 +18,7 @@ internal class GetProductByIdHandler :
     public async Task<DetailedProduct> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
         var product = await _productRepository
-            .ProjectToSingleOrDefaultAsync<DetailedProduct>(p => p.Id == request.Id, cancellationToken);
+            .ProjectToSingleOrDefaultAsync<DetailedProduct>(p => p.Id == request.Id && p.IsActive, cancellationToken);
 
         if (product is null)
             throw new NotFoundException($"Product with Id {request.Id} not found");

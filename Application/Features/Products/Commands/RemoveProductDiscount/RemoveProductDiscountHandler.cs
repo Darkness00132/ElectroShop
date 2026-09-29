@@ -3,25 +3,25 @@ using Application.Exceptions;
 using Domain.Entities.Catalog;
 using MediatR;
 
-namespace Application.Features.Products.Commands.ActivateProduct;
+namespace Application.Features.Products.Commands.RemoveProductDiscount;
 
-internal class ActivateProductHandler : IRequestHandler<ActivateProductCommand>
+internal class RemoveProductDiscountHandler : IRequestHandler<RemoveProductDiscountCommand>
 {
     private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
 
-    public ActivateProductHandler(IProductRepository productRepository, IUnitOfWork unitOfWork)
+    public RemoveProductDiscountHandler(IProductRepository productRepository, IUnitOfWork unitOfWork)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
     }
 
-    public async Task Handle(ActivateProductCommand request, CancellationToken cancellationToken)
+    public async Task Handle(RemoveProductDiscountCommand request, CancellationToken cancellationToken)
     {
         var product = await _productRepository.GetByIdAsync(request.ProductId, cancellationToken)
             ?? throw new NotFoundException(nameof(Product), request.ProductId);
 
-        product.Activate();
+        product.RemoveDiscount();
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }

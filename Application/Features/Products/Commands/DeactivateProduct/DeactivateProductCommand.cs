@@ -2,9 +2,9 @@ using Application.Abstractions;
 using Application.Constants;
 using MediatR;
 
-namespace Application.Features.Products.Commands.ActivateProduct;
+namespace Application.Features.Products.Commands.DeactivateProduct;
 
-public sealed record ActivateProductCommand(Guid ProductId) : ICacheInvalidatingCommand
+public sealed record DeactivateProductCommand(Guid ProductId) : ICacheInvalidatingCommand
 {
     public IReadOnlyCollection<string> CacheKeys
         => [CacheNames.Products, $"{CacheNames.Products}:{ProductId}"];

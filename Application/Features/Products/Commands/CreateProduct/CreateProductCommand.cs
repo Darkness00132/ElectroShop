@@ -1,4 +1,6 @@
+using Application.Abstractions;
 using Application.Common.Files;
+using Application.Constants;
 using MediatR;
 
 namespace Application.Features.Products.Commands.CreateProduct;
@@ -10,8 +12,14 @@ public record CreateProductCommand(
     string DescriptionAr,
     string SKU,
     decimal Price,
-    bool IsVisible,
+    bool IsActive,
     Guid CategoryId,
     Guid BrandId,
     Guid? DiscountId,
-    List<FileDto> Images) : IRequest<Guid>;
+    Dictionary<string, string>? Attributes,
+    List<FileDto> Images) : ICacheInvalidatingCommand<Guid>
+{
+    public IReadOnlyCollection<string> CacheKeys => [];
+
+    public IReadOnlyCollection<string> CacheTags => [CacheNames.Products];
+}

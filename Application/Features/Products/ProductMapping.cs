@@ -41,6 +41,7 @@ internal class ProductMapping : Profile
                             : null));
 
         CreateMap<ProductImage, ProductImageDto>();
+        CreateMap<ProductAttribute, ProductAttributeDto>();
         CreateMap<Discount, DiscountInProduct>()
             .ForMember(d => d.StartDate,
             o => o.MapFrom(s => s.ValidityPeriod.StartDate))

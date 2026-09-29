@@ -1,4 +1,6 @@
+using Application.Abstractions;
 using Application.Common.Files;
+using Application.Constants;
 using MediatR;
 
 namespace Application.Features.Products.Commands.UpdateProduct;
@@ -14,4 +16,11 @@ public sealed record UpdateProductCommand(
     Guid? CategoryId,
     Guid? BrandId,
     List<string>? DeletedImages,
-    List<FileDto>? NewImages) : IRequest;
+    List<FileDto>? NewImages,
+    Dictionary<string, string>? Attributes) : ICacheInvalidatingCommand
+{
+    public IReadOnlyCollection<string> CacheKeys
+        => [CacheNames.Products, $"{CacheNames.Products}:{Id}"];
+
+    public IReadOnlyCollection<string> CacheTags => [CacheNames.Products];
+}

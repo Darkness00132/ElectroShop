@@ -34,6 +34,7 @@ internal class ProductRepository : Repository<Product>, IProductRepository
 
         var query = _dbSet
             .AsNoTracking()
+            .Where(p => p.IsActive)
             .ApplyFilters(filters)
             .ApplySorting(filters);
 

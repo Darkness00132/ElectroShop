@@ -15,5 +15,6 @@ public class DetailedProduct
     public DiscountInProduct? Discount { get; set; }
     public int Quantity { get; set; }
     public List<ProductImageDto> Images { get; set; } = [];
+    public List<ProductAttributeDto> Attributes { get; set; } = [];
     public DateTime CreatedAt { get; set; }
 }
