@@ -1,6 +1,6 @@
 using Application.Abstractions.Repositories;
+using Application.Exceptions;
 using Domain.Entities.Catalog;
-using Domain.Exceptions;
 using Domain.ValueObjects;
 using MediatR;
 
@@ -29,7 +29,7 @@ internal sealed class UpdateDiscountHandler
             cancellationToken);
 
         if (discount is null) {
-            throw new DomainException("Discount was not found.");
+            throw new NotFoundException(nameof(Discount), request.Id);
         }
 
         var name = request.Name ?? discount.Name;
